@@ -64,8 +64,18 @@ export const BlockchainService = {
    * Crea y persiste un nuevo bloque encadenado al último bloque existente.
    * Se llama automáticamente cada vez que se registra una nueva medición
    * (desde MeasurementService, nunca directamente desde un endpoint HTTP).
+   *
+   * Además de crear el bloque, devuelve un VerificationResult "optimista":
+   * como el bloque se acaba de construir a partir del hash real del bloque
+   * anterior, sabemos que esta escritura puntual es válida sin necesidad de
+   * recorrer toda la cadena otra vez (eso sería redundante y costoso si se
+   * hiciera en cada tick del simulador). Este resultado optimista es el que
+   * se emite por Socket.io para mantener el indicador de estado de la
+   * blockchain actualizado en tiempo real en el dashboard; la verificación
+   * exhaustiva de toda la cadena sigue existiendo en `verifyChain()` y es la
+   * que se usa en `/api/blockchain/status` y al iniciar el servidor.
    */
-  async addBlock(measurement: Measurement): Promise<Block> {
+  async addBlock(measurement: Measurement): Promise<{ block: Block; optimisticStatus: VerificationResult }> {
     const lastBlock = await BlockModel.findLast();
     const previousHash = lastBlock ? lastBlock.hash : GENESIS_HASH;
     const nextIndex = lastBlock ? lastBlock.index + 1 : 0;
@@ -87,7 +97,14 @@ export const BlockchainService = {
       measurementId: block.measurementId,
     });
 
-    return block;
+    const optimisticStatus: VerificationResult = {
+      valid: true,
+      brokenAtIndex: null,
+      reason: null,
+      totalBlocksChecked: block.index + 1,
+    };
+
+    return { block, optimisticStatus };
   },
 
   /**

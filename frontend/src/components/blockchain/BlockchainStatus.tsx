@@ -1,9 +1,16 @@
 import React from "react";
-import { BlockchainStatusResponse } from "../../types";
+import { BlockchainStatusResponse, IntegrityFailureReason } from "../../types";
 
 interface BlockchainStatusProps {
   status: BlockchainStatusResponse | null;
 }
+
+const REASON_LABELS: Record<IntegrityFailureReason, string> = {
+  PREVIOUS_HASH_MISMATCH: "El hash del bloque anterior no coincide (encadenamiento roto).",
+  BLOCK_HASH_MISMATCH: "El hash almacenado no corresponde al contenido del bloque.",
+  DATA_HASH_MISMATCH: "La medición fue modificada después de anclarse a la cadena.",
+  MEASUREMENT_NOT_FOUND: "La medición asociada a este bloque ya no existe.",
+};
 
 export const BlockchainStatus: React.FC<BlockchainStatusProps> = ({ status }) => {
   const isValid = status?.valid ?? null;
@@ -44,10 +51,15 @@ export const BlockchainStatus: React.FC<BlockchainStatusProps> = ({ status }) =>
             <span className="truncate text-slate-300">{status.lastHash.slice(0, 16)}…</span>
           </div>
           {status.brokenAtIndex !== null && (
-            <div className="flex justify-between gap-2 text-red-400">
-              <span>Rotura detectada en bloque:</span>
-              <span>#{status.brokenAtIndex}</span>
-            </div>
+            <>
+              <div className="flex justify-between gap-2 text-red-400">
+                <span>Rotura detectada en bloque:</span>
+                <span>#{status.brokenAtIndex}</span>
+              </div>
+              {status.reason && (
+                <p className="text-red-300/80 normal-case leading-snug">{REASON_LABELS[status.reason]}</p>
+              )}
+            </>
           )}
         </div>
       )}

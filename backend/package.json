@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "build": "tsc -p .",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "db:migrate": "ts-node src/scripts/migrate.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -1,10 +1,11 @@
 import React from "react";
 
 interface HeaderProps {
-  simulatorRunning?: boolean;
+  /** Estado real de la conexión Socket.io — refleja si el dashboard está recibiendo datos en vivo. */
+  connected: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = () => {
+export const Header: React.FC<HeaderProps> = ({ connected }) => {
   return (
     <header className="border-b border-aqua-900/40 bg-[#081521]/80 backdrop-blur sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -23,8 +24,12 @@ export const Header: React.FC<HeaderProps> = () => {
         </div>
 
         <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-          <span className="hidden sm:inline">Datos simulados</span>
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="hidden sm:inline">{connected ? "En vivo" : "Reconectando…"}</span>
+          <span
+            className={`h-2 w-2 rounded-full ${
+              connected ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-pulse"
+            }`}
+          />
         </div>
       </div>
     </header>
