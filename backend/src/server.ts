@@ -3,16 +3,15 @@ import http from "http";
 import { createApp } from "./app";
 import { config } from "./config/env";
 import { waitForDatabase } from "./db/pool";
+import { initSocketServer } from "./socket";
 import { BlockchainService } from "./services/blockchain.service";
 import { SensorSimulator } from "./services/sensorSimulator.service";
 import { logger } from "./utils/logger";
 
 /**
  * NOTA: este archivo usa `http.createServer(app)` en lugar de `app.listen()`
- * directo a propósito. Esto deja el server HTTP "crudo" disponible para que,
- * en la etapa de Socket.io, se pueda adjuntar `new Server(httpServer, ...)`
- * sin reestructurar el bootstrap. Por ahora no hay sockets todavía: solo
- * REST sobre este mismo servidor HTTP.
+ * directo a propósito: deja el server HTTP "crudo" disponible para adjuntarle
+ * Socket.io (`initSocketServer`) antes de poner el servidor a escuchar.
  */
 async function bootstrap(): Promise<void> {
   await waitForDatabase();
@@ -35,12 +34,16 @@ async function bootstrap(): Promise<void> {
   const app = createApp();
   const httpServer = http.createServer(app);
 
-  // TODO (etapa Socket.io): adjuntar `new Server(httpServer, { cors: ... })`
-  // aquí mismo, antes de httpServer.listen(...).
+  // Adjunta Socket.io al mismo servidor HTTP, con CORS restringido a los
+  // mismos orígenes que la API REST (ver socket.ts). Debe inicializarse
+  // antes de que arranque el simulador, ya que MeasurementService emite
+  // eventos en tiempo real apenas se registra cada medición.
+  initSocketServer(httpServer);
 
   httpServer.listen(config.port, () => {
     logger.info(`🌊 AquaCHAIN backend escuchando en el puerto ${config.port}`, { env: config.nodeEnv });
     logger.info("Health check disponible en /health");
+    logger.info("Servidor de Socket.io activo para actualizaciones en tiempo real.");
 
     // El simulador es la única fuente de escritura del sistema (ver
     // requisitos de seguridad de API). Arranca automáticamente según
