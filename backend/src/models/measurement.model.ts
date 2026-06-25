@@ -42,6 +42,29 @@ export const MeasurementModel = {
     return result.rows[0] ? mapRow(result.rows[0]) : null;
   },
 
+  /**
+   * Trae varias mediciones por id en una sola consulta. Se usa en
+   * BlockchainService.verifyChain() para evitar hacer un SELECT por bloque
+   * (N consultas) cuando se verifica la cadena completa: en su lugar, se
+   * piden todas las mediciones referenciadas de una vez y se indexan en
+   * memoria por id.
+   */
+  async findByIds(ids: number[]): Promise<Map<number, Measurement>> {
+    if (ids.length === 0) return new Map();
+    const uniqueIds = Array.from(new Set(ids));
+    const result = await pool.query<MeasurementRow>(
+      `SELECT id, sensor_id, flow_rate, water_level, is_anomaly, "timestamp"
+       FROM measurements WHERE id = ANY($1::int[])`,
+      [uniqueIds]
+    );
+    const map = new Map<number, Measurement>();
+    for (const row of result.rows) {
+      const measurement = mapRow(row);
+      map.set(measurement.id, measurement);
+    }
+    return map;
+  },
+
   async findLatest(limit = 20): Promise<Measurement[]> {
     const result = await pool.query<MeasurementRow>(
       `SELECT id, sensor_id, flow_rate, water_level, is_anomaly, "timestamp"
