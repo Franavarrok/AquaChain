@@ -19,16 +19,15 @@ async function bootstrap(): Promise<void> {
   // Verificación de integridad de la blockchain al iniciar la aplicación.
   // Si la cadena ya tiene bloques (ej. tras un redeploy en Render) y alguno
   // fue alterado externamente, queremos saberlo apenas el proceso arranca.
+  // NOTA: BlockchainService.verifyChain() ya audita internamente el resultado
+  // (BLOCKCHAIN_VERIFIED / BLOCKCHAIN_INTEGRITY_VIOLATION); acá solo se agrega
+  // un log legible adicional si la cadena resultó inválida, sin duplicar el
+  // evento de auditoría.
   const verification = await BlockchainService.verifyChain();
-  if (verification.valid) {
-    logger.audit("BLOCKCHAIN_VERIFIED", { context: "startup" });
-  } else {
-    logger.audit("BLOCKCHAIN_INTEGRITY_VIOLATION", {
-      context: "startup",
-      brokenAtIndex: verification.brokenAtIndex,
-    });
+  if (!verification.valid) {
     logger.warn("La blockchain existente presenta una violación de integridad detectada al iniciar.", {
       brokenAtIndex: verification.brokenAtIndex,
+      reason: verification.reason,
     });
   }
 

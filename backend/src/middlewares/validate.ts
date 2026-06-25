@@ -18,3 +18,16 @@ export function validateQuery(schema: AnyZodObject) {
     next();
   };
 }
+
+/**
+ * Equivalente a `validateQuery` pero para `req.params` (segmentos de la URL,
+ * ej. `:measurementId`). Mismo comportamiento: valida, sanitiza/coacciona
+ * tipos, y reemplaza `req.params` por la versión parseada.
+ */
+export function validateParams(schema: AnyZodObject) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const parsed = schema.parse(req.params);
+    req.params = parsed as unknown as Request["params"];
+    next();
+  };
+}

@@ -48,6 +48,34 @@ export const BlockModel = {
     return result.rows[0] ? mapRow(result.rows[0]) : null;
   },
 
+  /**
+   * Busca el bloque que ancla una medición específica. Es la base de la
+   * trazabilidad "medición → bloque": dado el id de una medición visible en
+   * el dashboard, este método permite ubicar exactamente qué bloque de la
+   * cadena la contiene, para luego mostrar su hash y verificar su integridad.
+   */
+  async findByMeasurementId(measurementId: number): Promise<Block | null> {
+    const result = await pool.query<BlockRow>(
+      `SELECT "index", measurement_id, previous_hash, hash, data_hash, "timestamp"
+       FROM blocks
+       WHERE measurement_id = $1
+       LIMIT 1`,
+      [measurementId]
+    );
+    return result.rows[0] ? mapRow(result.rows[0]) : null;
+  },
+
+  async findByIndex(index: number): Promise<Block | null> {
+    const result = await pool.query<BlockRow>(
+      `SELECT "index", measurement_id, previous_hash, hash, data_hash, "timestamp"
+       FROM blocks
+       WHERE "index" = $1
+       LIMIT 1`,
+      [index]
+    );
+    return result.rows[0] ? mapRow(result.rows[0]) : null;
+  },
+
   async findAll(limit = 100): Promise<Block[]> {
     const result = await pool.query<BlockRow>(
       `SELECT "index", measurement_id, previous_hash, hash, data_hash, "timestamp"
