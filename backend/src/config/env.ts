@@ -41,7 +41,7 @@ function requireEnv(name: string, fallback?: string): string {
 function parseOrigins(raw: string): string[] {
   return raw
     .split(",")
-    .map((o) => o.trim())
+    .map((o) => o.trim().replace(/\/$/, ""))
     .filter((o) => o.length > 0);
 }
 

@@ -338,7 +338,7 @@ PORT=4000
 DATABASE_URL=postgresql://aquachain:aquachain@localhost:5432/aquachain
 
 # Whitelist compartida por la API REST y por Socket.io
-CORS_ALLOWED_ORIGINS=http://localhost:5173
+CORS_ALLOWED_ORIGINS=http://localhost:5173,https://aqua-chain.vercel.app
 
 SENSOR_INTERVAL_MS=5000
 ANOMALY_PROBABILITY=0.15
