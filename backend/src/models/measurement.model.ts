@@ -1,5 +1,6 @@
 import { pool } from "../db/pool";
-import { Measurement, NewMeasurementInput } from "../types";
+import { Measurement } from "../types";
+import { NewMeasurementInput } from "../validators/measurement.validators";
 
 interface MeasurementRow {
   id: number;

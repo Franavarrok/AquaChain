@@ -27,13 +27,6 @@ export interface Alert {
   timestamp: string;
 }
 
-export interface NewMeasurementInput {
-  sensorId: string;
-  flowRate: number;
-  waterLevel: number;
-  isAnomaly?: boolean;
-}
-
 export interface DashboardStats {
   totalMeasurements: number;
   totalAlerts: number;

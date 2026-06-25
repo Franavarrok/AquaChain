@@ -1,5 +1,6 @@
 import { MeasurementModel } from "../models/measurement.model";
-import { Measurement, NewMeasurementInput } from "../types";
+import { Measurement } from "../types";
+import { NewMeasurementInput } from "../validators/measurement.validators";
 import { BlockchainService } from "./blockchain.service";
 import { AlertService } from "./alert.service";
 import { logger } from "../utils/logger";

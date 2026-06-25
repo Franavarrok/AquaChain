@@ -4,6 +4,7 @@ import { createApp } from "./app";
 import { config } from "./config/env";
 import { waitForDatabase } from "./db/pool";
 import { BlockchainService } from "./services/blockchain.service";
+import { SensorSimulator } from "./services/sensorSimulator.service";
 import { logger } from "./utils/logger";
 
 /**
@@ -40,6 +41,17 @@ async function bootstrap(): Promise<void> {
   httpServer.listen(config.port, () => {
     logger.info(`🌊 AquaCHAIN backend escuchando en el puerto ${config.port}`, { env: config.nodeEnv });
     logger.info("Health check disponible en /health");
+
+    // El simulador es la única fuente de escritura del sistema (ver
+    // requisitos de seguridad de API). Arranca automáticamente según
+    // SENSOR_AUTOSTART; en caso de necesitar pausarlo durante una demo,
+    // hoy la única forma es deteniendo el proceso o cambiando esa variable
+    // y reiniciando — no existe un endpoint HTTP para controlarlo.
+    if (config.sensor.autostart) {
+      SensorSimulator.start(config.sensor.intervalMs, config.sensor.anomalyProbability);
+    } else {
+      logger.info("SENSOR_AUTOSTART=false — el simulador no se inició automáticamente.");
+    }
   });
 }
 
