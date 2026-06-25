@@ -1,5 +1,17 @@
 import { MeasurementService } from "./measurement.service";
 import { logger } from "../utils/logger";
+import { newMeasurementSchema } from "../validators/measurement.validators";
+
+/**
+ * SensorSimulator
+ *
+ * Reemplaza a la red de sensores físicos que no existe en este MVP. Corre
+ * exclusivamente DENTRO del proceso del backend (lo arranca server.ts al
+ * bootear) y nunca se expone como endpoint HTTP: no hay ningún
+ * POST /api/.../simulator/start ni equivalente. Esto es intencional —
+ * ver el requisito de seguridad de API: la única vía de escritura del
+ * sistema es este simulador llamando directamente a MeasurementService.
+ */
 
 const SENSOR_IDS = ["SENSOR-DGI-01", "SENSOR-DGI-02", "SENSOR-DGI-03"];
 
@@ -62,12 +74,21 @@ function generateReading(anomalyProbability: number): {
 class SensorSimulatorClass {
   private intervalHandle: NodeJS.Timeout | null = null;
   private running = false;
+  /**
+   * Guard contra ejecuciones superpuestas: si un ciclo todavía está
+   * persistiendo en la base de datos (ej. por un cold start de Neon) cuando
+   * el timer dispara el siguiente, este flag evita que se acumulen escrituras
+   * en paralelo, lo que podría desordenar el encadenamiento de bloques (dos
+   * llamadas concurrentes a BlockchainService.addBlock podrían leer el mismo
+   * "último bloque" antes de que la primera termine de insertar el suyo).
+   */
+  private tickInProgress = false;
 
   isRunning(): boolean {
     return this.running;
   }
 
-  start(intervalMs = 5000, anomalyProbability = 0.15): void {
+  start(intervalMs: number, anomalyProbability: number): void {
     if (this.running) {
       logger.warn("El simulador ya está en ejecución. Ignorando solicitud de start().");
       return;
@@ -76,13 +97,8 @@ class SensorSimulatorClass {
     this.running = true;
     logger.audit("SIMULATOR_STARTED", { intervalMs, anomalyProbability });
 
-    this.intervalHandle = setInterval(async () => {
-      try {
-        const reading = generateReading(anomalyProbability);
-        await MeasurementService.register(reading);
-      } catch (err) {
-        logger.error("Error generando/registrando medición simulada:", err);
-      }
+    this.intervalHandle = setInterval(() => {
+      void this.tick(anomalyProbability);
     }, intervalMs);
   }
 
@@ -93,6 +109,37 @@ class SensorSimulatorClass {
     }
     this.running = false;
     logger.audit("SIMULATOR_STOPPED", {});
+  }
+
+  /**
+   * Ejecuta un ciclo de simulación: genera una lectura, la valida (defensa en
+   * profundidad — ver measurement.validators.ts) y la registra a través de
+   * MeasurementService, que se encarga de persistirla, evaluarla contra las
+   * reglas de alerta y anclarla a la blockchain.
+   */
+  private async tick(anomalyProbability: number): Promise<void> {
+    if (this.tickInProgress) {
+      logger.warn("Ciclo de simulación anterior aún en curso; se omite este tick para evitar superposición.");
+      return;
+    }
+
+    this.tickInProgress = true;
+    try {
+      const rawReading = generateReading(anomalyProbability);
+
+      // Aunque el simulador es código interno propio, se valida igual antes
+      // de tocar la base de datos: defensa en profundidad ante bugs futuros
+      // en generateReading() (ver validators/measurement.validators.ts).
+      const reading = newMeasurementSchema.parse(rawReading);
+
+      await MeasurementService.register(reading);
+    } catch (err) {
+      logger.error("Error generando/registrando medición simulada", {
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      this.tickInProgress = false;
+    }
   }
 }
 

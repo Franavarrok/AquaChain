@@ -51,6 +51,14 @@ export const AlertService = {
       logger.audit("ALERT_CREATED", { id: a.id, type: a.type, value: a.value, measurementId: a.measurementId })
     );
 
+    if (generated.length > 0) {
+      logger.audit("ANOMALY_DETECTED", {
+        measurementId: measurement.id,
+        sensorId: measurement.sensorId,
+        alertTypes: generated.map((a) => a.type),
+      });
+    }
+
     return generated;
   },
 
